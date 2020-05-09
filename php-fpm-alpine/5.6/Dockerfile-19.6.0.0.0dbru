@@ -1,0 +1,26 @@
+# Alpine Linux v3.8
+# PHP 5.6
+# Instant Client Version 19.6.0.0.0
+
+FROM php:5.6-fpm-alpine
+
+ARG ORA_DIR=/opt/oracle
+ARG INSTANTCLIENT_DIR=instantclient_19_6
+ARG INSTANTCLIENT_VER=19.6.0.0.0dbru
+ARG OCI8=oci8-2.0.12
+
+RUN apk update && apk upgrade
+
+COPY instantclients/instantclient-basic-linux.x64-$INSTANTCLIENT_VER.zip $ORA_DIR/
+COPY instantclients/instantclient-sdk-linux.x64-$INSTANTCLIENT_VER.zip $ORA_DIR/
+RUN find $ORA_DIR -type f -name '*.zip' | xargs -n1 unzip -d $ORA_DIR \
+    && rm -f $ORA_DIR/*.zip
+
+RUN ["apk", "add", "autoconf", "build-base", "libnsl", "libaio", "gcompat"]
+RUN ln -s /usr/lib/libnsl.so.2 /usr/lib/libnsl.so.1 \
+    && ln -s /lib/libc.musl-x86_64.so.1 /usr/lib/libresolv.so.2
+
+RUN echo instantclient,$ORA_DIR/$INSTANTCLIENT_DIR | pecl install $OCI8 \
+    && docker-php-ext-enable oci8
+
+CMD php -m | grep oci8

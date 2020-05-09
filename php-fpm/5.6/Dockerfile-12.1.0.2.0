@@ -1,0 +1,27 @@
+# Debian GNU/Linux 9 (stretch)
+# PHP 5.6
+# Instant Client Version 12.1.0.2.0
+
+FROM php:5.6-fpm
+
+ARG ORA_DIR=/opt/oracle
+ARG INSTANTCLIENT_DIR=instantclient_12_1
+ARG INSTANTCLIENT_VER=12.1.0.2.0
+ARG OCI8=oci8-2.0.12
+
+RUN apt-get update && apt-get upgrade -y && apt-get install unzip libaio1
+
+COPY instantclients/instantclient-basic-linux.x64-$INSTANTCLIENT_VER.zip $ORA_DIR/
+COPY instantclients/instantclient-sdk-linux.x64-$INSTANTCLIENT_VER.zip $ORA_DIR/
+RUN find $ORA_DIR -type f -name '*.zip' | xargs -n1 unzip -d $ORA_DIR \
+    && rm -f $ORA_DIR/*.zip
+
+RUN ln -s libclntsh.so.12.1 $ORA_DIR/$INSTANTCLIENT_DIR/libclntsh.so
+
+RUN echo instantclient,$ORA_DIR/$INSTANTCLIENT_DIR | pecl install $OCI8 \
+    && docker-php-ext-enable oci8
+
+# libmql1.so
+ENV LD_LIBRARY_PATH=$ORA_DIR/$INSTANTCLIENT_DIR:$LD_LIBRARY_PATH
+
+CMD php -m | grep oci8
